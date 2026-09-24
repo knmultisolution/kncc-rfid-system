@@ -1,9 +1,14 @@
--- Fix for: column reference "student_id" is ambiguous
--- Run this in Supabase SQL Editor.
+-- FINAL FIX for:
+--   column reference "student_id" is ambiguous
 --
--- The function has an OUT/return column named student_id, so the
--- attendance_records columns must be qualified with a table alias.
--- attendance_type is also an OUT/return column, so it is qualified too.
+-- The previous fix qualified the SELECT inside the attendance check,
+-- but PostgreSQL can still resolve the PL/pgSQL output column `student_id`
+-- and `attendance_type` against the ON CONFLICT target.
+--
+-- Using `ON CONFLICT DO NOTHING` removes that ambiguity completely.
+-- The attendance_records table in this project has the intended unique
+-- constraint on (student_id, attendance_date, attendance_type), so the
+-- duplicate scan is still blocked safely.
 
 create or replace function public.process_rfid_scan(
   p_rfid_uid text,
@@ -99,9 +104,7 @@ begin
     return;
   end if;
 
-  -- IMPORTANT FIX:
-  -- Qualify attendance_records columns to avoid ambiguity with
-  -- the function's OUT/return columns named student_id and attendance_type.
+  -- Qualify table columns to avoid PL/pgSQL output-column ambiguity.
   select exists (
     select 1
     from public.attendance_records as ar
@@ -130,6 +133,8 @@ begin
         'present'::attendance_status
     end;
 
+  -- Do not name the conflict columns here; that avoids collision with
+  -- the function's OUT parameters named student_id/attendance_type.
   insert into public.attendance_records (
     student_id,
     rfid_card_id,
@@ -148,12 +153,7 @@ begin
     v_type,
     v_status
   )
-  on conflict (
-    student_id,
-    attendance_date,
-    attendance_type
-  )
-  do nothing
+  on conflict do nothing
   returning id
   into v_new_id;
 
