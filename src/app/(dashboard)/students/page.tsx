@@ -7,36 +7,20 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Modal } from "@/components/ui/modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Badge, statusTone } from "@/components/ui/badge";
-<<<<<<< HEAD
 import { Users, Plus, Pencil, Trash2, Loader2, Search, Upload, Download, CreditCard, ScanLine, Unplug } from "lucide-react";
 import toast from "react-hot-toast";
 import Link from "next/link";
 import type { Student, SchoolClass, Profile } from "@/types";
-=======
-import { Users, Plus, Pencil, Trash2, Loader2, Search, Upload, Download, CreditCard } from "lucide-react";
-import toast from "react-hot-toast";
-import Link from "next/link";
-import type { Student, Grade, Division, SchoolClass, Profile } from "@/types";
->>>>>>> 8abea031368bb0338b5a18afa28283c092eb09ea
 import { formatDate } from "@/lib/utils";
 
 export default function StudentsPage() {
   const supabase = createClient();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
-<<<<<<< HEAD
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [classFilter, setClassFilter] = useState("");
-=======
-  const [grades, setGrades] = useState<Grade[]>([]);
-  const [divisions, setDivisions] = useState<Division[]>([]);
-  const [classes, setClasses] = useState<SchoolClass[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [gradeFilter, setGradeFilter] = useState("");
->>>>>>> 8abea031368bb0338b5a18afa28283c092eb09ea
   const [statusFilter, setStatusFilter] = useState("");
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -44,74 +28,43 @@ export default function StudentsPage() {
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Student | null>(null);
   const [deleting, setDeleting] = useState(false);
-<<<<<<< HEAD
   const [rfidConnected, setRfidConnected] = useState(false);
   const [rfidScanning, setRfidScanning] = useState(false);
   const [rfidPort, setRfidPort] = useState<any>(null);
   const [rfidReader, setRfidReader] = useState<any>(null);
-=======
->>>>>>> 8abea031368bb0338b5a18afa28283c092eb09ea
 
   const emptyForm = {
     student_code: "",
     index_number: "",
     full_name: "",
-<<<<<<< HEAD
     class_id: "",
     rfid_uid: "",
-=======
-    grade_id: "",
-    division_id: "",
-    class_id: "",
-    gender: "",
-    date_of_birth: "",
-    guardian_name: "",
-    guardian_phone: "",
-    address: "",
->>>>>>> 8abea031368bb0338b5a18afa28283c092eb09ea
     status: "active",
   };
   const [form, setForm] = useState(emptyForm);
 
   async function load() {
     setLoading(true);
-<<<<<<< HEAD
     const [{ data: me }, { data: s, error }, { data: c }] = await Promise.all([
-=======
-    const [{ data: me }, { data: s, error }, { data: g }, { data: d }, { data: c }] = await Promise.all([
->>>>>>> 8abea031368bb0338b5a18afa28283c092eb09ea
       supabase.auth.getUser().then(async ({ data }) => {
         if (!data.user) return { data: null };
         return supabase.from("profiles").select("*").eq("id", data.user.id).maybeSingle();
       }),
       supabase
         .from("students")
-<<<<<<< HEAD
         .select("*, grade:grades(*), division:divisions(*), class:classes(*, grade:grades(*), division:divisions(*)), rfid_cards(*)")
         .order("created_at", { ascending: false }),
-=======
-        .select("*, grade:grades(*), division:divisions(*), class:classes(*), rfid_cards(*)")
-        .order("created_at", { ascending: false }),
-      supabase.from("grades").select("*").order("display_order"),
-      supabase.from("divisions").select("*").order("name"),
->>>>>>> 8abea031368bb0338b5a18afa28283c092eb09ea
       supabase.from("classes").select("*, grade:grades(*), division:divisions(*)").order("created_at"),
     ]);
     if (error) toast.error(error.message);
     setProfile(me as Profile | null);
     setStudents((s as Student[]) ?? []);
-<<<<<<< HEAD
-=======
-    setGrades((g as Grade[]) ?? []);
-    setDivisions((d as Division[]) ?? []);
->>>>>>> 8abea031368bb0338b5a18afa28283c092eb09ea
     setClasses((c as SchoolClass[]) ?? []);
     setLoading(false);
   }
 
   useEffect(() => {
     load();
-<<<<<<< HEAD
 
     return () => {
       void disconnectRfidReader();
@@ -238,10 +191,6 @@ export default function StudentsPage() {
     setRfidConnected(false);
   }
 
-=======
-  }, []);
-
->>>>>>> 8abea031368bb0338b5a18afa28283c092eb09ea
   const isSuperAdmin = profile?.role === "super_admin";
 
   const filtered = useMemo(() => {
@@ -251,7 +200,6 @@ export default function StudentsPage() {
         !q ||
         s.full_name.toLowerCase().includes(q) ||
         s.index_number.toLowerCase().includes(q) ||
-<<<<<<< HEAD
         s.student_code.toLowerCase().includes(q) ||
         s.rfid_cards?.some((card) => card.rfid_uid.toLowerCase().includes(q));
       const matchesClass = !classFilter || s.class_id === classFilter;
@@ -262,45 +210,21 @@ export default function StudentsPage() {
 
   function openCreate() {
     void disconnectRfidReader();
-=======
-        s.student_code.toLowerCase().includes(q);
-      const matchesGrade = !gradeFilter || s.grade_id === gradeFilter;
-      const matchesStatus = !statusFilter || s.status === statusFilter;
-      return matchesSearch && matchesGrade && matchesStatus;
-    });
-  }, [students, search, gradeFilter, statusFilter]);
-
-  function openCreate() {
->>>>>>> 8abea031368bb0338b5a18afa28283c092eb09ea
     setEditing(null);
     setForm(emptyForm);
     setModalOpen(true);
   }
 
   function openEdit(s: Student) {
-<<<<<<< HEAD
     void disconnectRfidReader();
     const activeCard = s.rfid_cards?.find((card) => card.status === "active") ?? s.rfid_cards?.[0];
-=======
->>>>>>> 8abea031368bb0338b5a18afa28283c092eb09ea
     setEditing(s);
     setForm({
       student_code: s.student_code,
       index_number: s.index_number,
       full_name: s.full_name,
-<<<<<<< HEAD
       class_id: s.class_id ?? "",
       rfid_uid: activeCard?.rfid_uid ?? "",
-=======
-      grade_id: s.grade_id ?? "",
-      division_id: s.division_id ?? "",
-      class_id: s.class_id ?? "",
-      gender: s.gender ?? "",
-      date_of_birth: s.date_of_birth ?? "",
-      guardian_name: s.guardian_name ?? "",
-      guardian_phone: s.guardian_phone ?? "",
-      address: s.address ?? "",
->>>>>>> 8abea031368bb0338b5a18afa28283c092eb09ea
       status: s.status,
     });
     setModalOpen(true);
@@ -309,7 +233,6 @@ export default function StudentsPage() {
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
-<<<<<<< HEAD
 
     const normalizedUid = normalizeUid(form.rfid_uid);
     if (normalizedUid && !isValidUid(normalizedUid)) {
@@ -318,13 +241,10 @@ export default function StudentsPage() {
       return;
     }
 
-=======
->>>>>>> 8abea031368bb0338b5a18afa28283c092eb09ea
     const payload: any = {
       student_code: form.student_code.trim(),
       index_number: form.index_number.trim(),
       full_name: form.full_name.trim(),
-<<<<<<< HEAD
       class_id: form.class_id || null,
       status: form.status,
     };
@@ -455,32 +375,6 @@ export default function StudentsPage() {
     toast.success(editing ? "Student updated" : normalizedUid ? "Student added with RFID card" : "Student added");
     setModalOpen(false);
     await disconnectRfidReader();
-=======
-      grade_id: form.grade_id || null,
-      division_id: form.division_id || null,
-      class_id: form.class_id || null,
-      gender: form.gender || null,
-      date_of_birth: form.date_of_birth || null,
-      guardian_name: form.guardian_name.trim() || null,
-      guardian_phone: form.guardian_phone.trim() || null,
-      address: form.address.trim() || null,
-      status: form.status,
-    };
-
-    const { error } = editing
-      ? await supabase.from("students").update(payload).eq("id", editing.id)
-      : await supabase.from("students").insert(payload);
-
-    setSaving(false);
-    if (error) {
-      if (error.message.includes("index_number")) toast.error("This index number is already in use.");
-      else if (error.message.includes("student_code")) toast.error("This Student ID is already in use.");
-      else toast.error(error.message);
-      return;
-    }
-    toast.success(editing ? "Student updated" : "Student added");
-    setModalOpen(false);
->>>>>>> 8abea031368bb0338b5a18afa28283c092eb09ea
     load();
   }
 
@@ -498,20 +392,12 @@ export default function StudentsPage() {
     load();
   }
 
-<<<<<<< HEAD
-=======
-  const classesForGrade = classes.filter((c) => !form.grade_id || c.grade_id === form.grade_id);
->>>>>>> 8abea031368bb0338b5a18afa28283c092eb09ea
 
   return (
     <div>
       <PageHeader
         title="Students"
-<<<<<<< HEAD
         description="Add students quickly with class details and an RFID card UID."
-=======
-        description="Manage the student roster, class assignment, and status."
->>>>>>> 8abea031368bb0338b5a18afa28283c092eb09ea
         action={
           isSuperAdmin ? (
             <div className="flex gap-2">
@@ -534,24 +420,14 @@ export default function StudentsPage() {
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
             className="input pl-9"
-<<<<<<< HEAD
             placeholder="Search by name, index number, student ID, or RFID UID..."
-=======
-            placeholder="Search by name, index number, or student ID..."
->>>>>>> 8abea031368bb0338b5a18afa28283c092eb09ea
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-<<<<<<< HEAD
         <select className="input sm:w-56" value={classFilter} onChange={(e) => setClassFilter(e.target.value)}>
           <option value="">All classes</option>
           {classes.map((c) => <option key={c.id} value={c.id}>{c.grade?.name} - {c.division?.name}</option>)}
-=======
-        <select className="input sm:w-48" value={gradeFilter} onChange={(e) => setGradeFilter(e.target.value)}>
-          <option value="">All grades</option>
-          {grades.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
->>>>>>> 8abea031368bb0338b5a18afa28283c092eb09ea
         </select>
         <select className="input sm:w-40" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
           <option value="">All statuses</option>
@@ -568,11 +444,7 @@ export default function StudentsPage() {
         <EmptyState
           icon={Users}
           title="No students added yet"
-<<<<<<< HEAD
           description="Add your first student to start tracking attendance. Select the student's class and assign an RFID card."
-=======
-          description="Add your first student to start tracking attendance. Set up grades, divisions, and classes first for smoother data entry."
->>>>>>> 8abea031368bb0338b5a18afa28283c092eb09ea
           actionHref={isSuperAdmin ? "#" : undefined}
           actionLabel={isSuperAdmin ? "" : undefined}
         />
@@ -607,14 +479,10 @@ export default function StudentsPage() {
                     </td>
                     <td className="px-4 py-3">
                       {card ? (
-<<<<<<< HEAD
                         <div className="flex flex-col gap-1">
                           <span className="font-mono text-xs font-medium text-slate-800 dark:text-slate-200">{card.rfid_uid}</span>
                           <span><Badge tone={statusTone(card.status)}>{card.status}</Badge></span>
                         </div>
-=======
-                        <Badge tone={statusTone(card.status)}>{card.status}</Badge>
->>>>>>> 8abea031368bb0338b5a18afa28283c092eb09ea
                       ) : (
                         <Link href="/rfid-cards" className="inline-flex items-center gap-1 text-xs font-medium text-brand-600 hover:underline">
                           <CreditCard className="h-3.5 w-3.5" /> Assign card
@@ -637,7 +505,6 @@ export default function StudentsPage() {
         </div>
       )}
 
-<<<<<<< HEAD
       <Modal
         open={modalOpen}
         onClose={() => {
@@ -647,9 +514,6 @@ export default function StudentsPage() {
         title={editing ? "Edit Student" : "Add Student"}
         maxWidth="max-w-2xl"
       >
-=======
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? "Edit Student" : "Add Student"} maxWidth="max-w-2xl">
->>>>>>> 8abea031368bb0338b5a18afa28283c092eb09ea
         <form onSubmit={handleSave} className="grid gap-4 sm:grid-cols-2">
           <div>
             <label className="label">Student ID</label>
@@ -663,7 +527,6 @@ export default function StudentsPage() {
             <label className="label">Full name</label>
             <input className="input" required value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} />
           </div>
-<<<<<<< HEAD
           <div className="sm:col-span-2">
             <label className="label">Class</label>
             <select className="input" required value={form.class_id} onChange={(e) => setForm({ ...form, class_id: e.target.value })}>
@@ -671,41 +534,6 @@ export default function StudentsPage() {
               {classes.map((c) => <option key={c.id} value={c.id}>{c.grade?.name} - {c.division?.name}</option>)}
             </select>
             <p className="mt-1 text-xs text-slate-400">Grade and division are taken automatically from the selected class.</p>
-=======
-          <div>
-            <label className="label">Grade</label>
-            <select className="input" value={form.grade_id} onChange={(e) => setForm({ ...form, grade_id: e.target.value, class_id: "" })}>
-              <option value="">Select grade</option>
-              {grades.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="label">Division</label>
-            <select className="input" value={form.division_id} onChange={(e) => setForm({ ...form, division_id: e.target.value })}>
-              <option value="">Select division</option>
-              {divisions.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="label">Class</label>
-            <select className="input" value={form.class_id} onChange={(e) => setForm({ ...form, class_id: e.target.value })}>
-              <option value="">Unassigned</option>
-              {classesForGrade.map((c) => <option key={c.id} value={c.id}>{c.grade?.name} - {c.division?.name}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="label">Gender</label>
-            <select className="input" value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })}>
-              <option value="">Select</option>
-              <option value="male">Male</option>
-              <option value="female">Female</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
-          <div>
-            <label className="label">Date of birth</label>
-            <input type="date" className="input" value={form.date_of_birth} onChange={(e) => setForm({ ...form, date_of_birth: e.target.value })} />
->>>>>>> 8abea031368bb0338b5a18afa28283c092eb09ea
           </div>
           <div>
             <label className="label">Status</label>
@@ -716,7 +544,6 @@ export default function StudentsPage() {
               <option value="graduated">Graduated</option>
             </select>
           </div>
-<<<<<<< HEAD
 
           <div className="rounded-xl border border-brand-100 bg-brand-50/60 p-4 dark:border-brand-900/60 dark:bg-brand-950/20 sm:col-span-2">
             <div className="mb-2 flex items-start justify-between gap-3">
@@ -770,24 +597,6 @@ export default function StudentsPage() {
             <button type="submit" className="btn-primary" disabled={saving}>
               {saving && <Loader2 className="h-4 w-4 animate-spin" />}
               {editing ? "Save Changes" : "Add Student"}
-=======
-          <div>
-            <label className="label">Guardian name</label>
-            <input className="input" value={form.guardian_name} onChange={(e) => setForm({ ...form, guardian_name: e.target.value })} />
-          </div>
-          <div>
-            <label className="label">Guardian phone</label>
-            <input className="input" value={form.guardian_phone} onChange={(e) => setForm({ ...form, guardian_phone: e.target.value })} />
-          </div>
-          <div className="sm:col-span-2">
-            <label className="label">Address</label>
-            <textarea className="input" rows={2} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
-          </div>
-          <div className="flex justify-end gap-2 pt-2 sm:col-span-2">
-            <button type="button" className="btn-secondary" onClick={() => setModalOpen(false)}>Cancel</button>
-            <button type="submit" className="btn-primary" disabled={saving}>
-              {saving && <Loader2 className="h-4 w-4 animate-spin" />} Save
->>>>>>> 8abea031368bb0338b5a18afa28283c092eb09ea
             </button>
           </div>
         </form>

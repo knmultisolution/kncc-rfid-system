@@ -13,11 +13,7 @@ import type { Profile, SchoolClass, Grade } from "@/types";
 const PERMISSION_MATRIX: { feature: string; superAdmin: boolean; principal: boolean; sectionalHead: boolean; teacher: boolean }[] = [
   { feature: "View dashboard & live attendance", superAdmin: true, principal: true, sectionalHead: true, teacher: true },
   { feature: "View all students / attendance / reports", superAdmin: true, principal: true, sectionalHead: false, teacher: false },
-<<<<<<< HEAD
   { feature: "View assigned class / grade only", superAdmin: false, principal: false, sectionalHead: true, teacher: true },
-=======
-  { feature: "View assigned grades/classes only", superAdmin: false, principal: false, sectionalHead: true, teacher: true },
->>>>>>> 8abea031368bb0338b5a18afa28283c092eb09ea
   { feature: "Add / edit / delete students", superAdmin: true, principal: false, sectionalHead: false, teacher: false },
   { feature: "Manage RFID cards & devices", superAdmin: true, principal: false, sectionalHead: false, teacher: false },
   { feature: "Add comments", superAdmin: true, principal: true, sectionalHead: true, teacher: true },
@@ -75,7 +71,6 @@ export default function RolesPermissionsPage() {
       const { error } = await supabase.from("teacher_assignments").insert({ teacher_id: form.profile_id, class_id: form.class_id });
       setSaving(false);
       if (error) {
-<<<<<<< HEAD
         toast.error(error.message.toLowerCase().includes("unique") ? "This teacher already has a class assignment." : error.message);
         return;
       }
@@ -89,17 +84,6 @@ export default function RolesPermissionsPage() {
       const { error } = await supabase.from("sectional_head_assignments").insert({
         sectional_head_id: form.profile_id,
         grade_id: form.grade_id,
-=======
-        toast.error(error.message.includes("unique") ? "This teacher is already assigned to this class." : error.message);
-        return;
-      }
-      toast.success("Teacher assigned");
-    } else {
-      const { error } = await supabase.from("sectional_head_assignments").insert({
-        sectional_head_id: form.profile_id,
-        grade_id: form.grade_id || null,
-        class_id: form.class_id || null,
->>>>>>> 8abea031368bb0338b5a18afa28283c092eb09ea
       });
       setSaving(false);
       if (error) {
@@ -126,23 +110,16 @@ export default function RolesPermissionsPage() {
     load();
   }
 
-<<<<<<< HEAD
   const assignedTeacherIds = new Set(teacherAssignments.map((a) => a.teacher_id));
   const assignedHeadIds = new Set(headAssignments.map((a) => a.sectional_head_id));
   const availableTeachers = teachers.filter((t) => !assignedTeacherIds.has(t.id));
   const availableHeads = heads.filter((h) => !assignedHeadIds.has(h.id));
 
-=======
->>>>>>> 8abea031368bb0338b5a18afa28283c092eb09ea
   return (
     <div>
       <PageHeader
         title="Roles & Permissions"
-<<<<<<< HEAD
         description="Super Admin only: assign each Teacher to one class and each Sectional Head to one grade."
-=======
-        description="Reference for what each role can access, plus scoping Teachers and Sectional Heads to classes or grades."
->>>>>>> 8abea031368bb0338b5a18afa28283c092eb09ea
       />
 
       <div className="card mb-6 overflow-x-auto">
@@ -178,20 +155,12 @@ export default function RolesPermissionsPage() {
           <div>
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Teacher → Class Assignments</h3>
-<<<<<<< HEAD
               <button className="btn-outline" onClick={() => openAssign("teacher")} disabled={!availableTeachers.length || !classes.length}>
-=======
-              <button className="btn-outline" onClick={() => openAssign("teacher")} disabled={!teachers.length || !classes.length}>
->>>>>>> 8abea031368bb0338b5a18afa28283c092eb09ea
                 <Plus className="h-4 w-4" /> Assign
               </button>
             </div>
             {teacherAssignments.length === 0 ? (
-<<<<<<< HEAD
               <EmptyState icon={ShieldCheck} title="No teacher assignments yet" description="Assign each Teacher to one class so they only see that class's students and attendance." />
-=======
-              <EmptyState icon={ShieldCheck} title="No teacher assignments yet" description="Assign teachers to their classes so they only see their own students." />
->>>>>>> 8abea031368bb0338b5a18afa28283c092eb09ea
             ) : (
               <div className="space-y-2">
                 {teacherAssignments.map((a) => (
@@ -212,20 +181,12 @@ export default function RolesPermissionsPage() {
           <div>
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Sectional Head Scopes</h3>
-<<<<<<< HEAD
               <button className="btn-outline" onClick={() => openAssign("head")} disabled={!availableHeads.length || !grades.length}>
-=======
-              <button className="btn-outline" onClick={() => openAssign("head")} disabled={!heads.length}>
->>>>>>> 8abea031368bb0338b5a18afa28283c092eb09ea
                 <Plus className="h-4 w-4" /> Assign
               </button>
             </div>
             {headAssignments.length === 0 ? (
-<<<<<<< HEAD
               <EmptyState icon={ShieldCheck} title="No Sectional Head scopes yet" description="Assign each Sectional Head to one grade. They will see all classes and students in that grade." />
-=======
-              <EmptyState icon={ShieldCheck} title="No Sectional Head scopes yet" description="Scope Sectional Heads to a grade or specific class." />
->>>>>>> 8abea031368bb0338b5a18afa28283c092eb09ea
             ) : (
               <div className="space-y-2">
                 {headAssignments.map((a) => (
@@ -253,11 +214,7 @@ export default function RolesPermissionsPage() {
             <label className="label">{assignModal === "teacher" ? "Teacher" : "Sectional Head"}</label>
             <select className="input" required value={form.profile_id} onChange={(e) => setForm({ ...form, profile_id: e.target.value })}>
               <option value="">Select user</option>
-<<<<<<< HEAD
               {(assignModal === "teacher" ? availableTeachers : availableHeads).map((p) => (
-=======
-              {(assignModal === "teacher" ? teachers : heads).map((p) => (
->>>>>>> 8abea031368bb0338b5a18afa28283c092eb09ea
                 <option key={p.id} value={p.id}>{p.full_name}</option>
               ))}
             </select>
@@ -271,7 +228,6 @@ export default function RolesPermissionsPage() {
               </select>
             </div>
           ) : (
-<<<<<<< HEAD
             <div>
               <label className="label">Grade</label>
               <select className="input" required value={form.grade_id} onChange={(e) => setForm({ ...form, grade_id: e.target.value })}>
@@ -280,24 +236,6 @@ export default function RolesPermissionsPage() {
               </select>
               <p className="mt-1 text-xs text-slate-400">The Sectional Head will see all classes within this grade.</p>
             </div>
-=======
-            <>
-              <div>
-                <label className="label">Grade (whole grade scope)</label>
-                <select className="input" value={form.grade_id} onChange={(e) => setForm({ ...form, grade_id: e.target.value, class_id: "" })}>
-                  <option value="">None</option>
-                  {grades.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="label">Or a single class</label>
-                <select className="input" value={form.class_id} onChange={(e) => setForm({ ...form, class_id: e.target.value, grade_id: "" })}>
-                  <option value="">None</option>
-                  {classes.map((c) => <option key={c.id} value={c.id}>{c.grade?.name} - {c.division?.name}</option>)}
-                </select>
-              </div>
-            </>
->>>>>>> 8abea031368bb0338b5a18afa28283c092eb09ea
           )}
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" className="btn-secondary" onClick={() => setAssignModal(null)}>Cancel</button>
