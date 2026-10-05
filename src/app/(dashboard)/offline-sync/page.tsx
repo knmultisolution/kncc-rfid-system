@@ -85,7 +85,9 @@ export default function OfflineSyncPage() {
                 <th className="px-4 py-3">RFID UID</th>
                 <th className="px-4 py-3">Device</th>
                 <th className="px-4 py-3">Scanned At</th>
-                <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3">Sync</th>
+                <th className="px-4 py-3">Verification</th>
+                <th className="px-4 py-3">Signal</th>
                 <th className="px-4 py-3">Attempts</th>
                 <th className="px-4 py-3">Error</th>
                 <th className="px-4 py-3 text-right">Actions</th>
@@ -98,7 +100,9 @@ export default function OfflineSyncPage() {
                   <td className="px-4 py-3 text-slate-500">{q.device?.device_name ?? q.device?.device_code ?? "—"}</td>
                   <td className="px-4 py-3 text-slate-500">{formatDateTime(q.scanned_at)}</td>
                   <td className="px-4 py-3"><Badge tone={statusTone(q.sync_status)}>{q.sync_status}</Badge></td>
-                  <td className="px-4 py-3 text-slate-500">{q.attempts}</td>
+                  <td className="px-4 py-3 text-xs">{q.verification_status ?? "—"}</td>
+                  <td className="px-4 py-3">{q.signal_fingerprint ? <Badge tone="green">Profile</Badge> : <Badge tone="slate">None</Badge>}</td>
+                  <td className="px-4 py-3 text-slate-500">{q.attempts ?? 0}</td>
                   <td className="px-4 py-3 max-w-xs truncate text-xs text-red-500">{q.error_message ?? "—"}</td>
                   <td className="px-4 py-3 text-right">
                     {q.sync_status === "failed" && (

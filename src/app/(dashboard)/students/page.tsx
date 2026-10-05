@@ -1,17 +1,19 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Modal } from "@/components/ui/modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Badge, statusTone } from "@/components/ui/badge";
-import { Users, Plus, Pencil, Trash2, Loader2, Search, Upload, Download, CreditCard, ScanLine, Unplug } from "lucide-react";
+import { Users, Plus, Pencil, Trash2, Loader2, Search, Upload, Download, CreditCard, ScanLine, Unplug, Eye, FileSpreadsheet } from "lucide-react";
 import toast from "react-hot-toast";
 import Link from "next/link";
 import type { Student, SchoolClass, Profile } from "@/types";
 import { formatDate } from "@/lib/utils";
+import { StatCard } from "@/components/ui/stat-card";
+import { downloadCsv, downloadText, firstValue, parseCsv } from "@/lib/csv";
 
 export default function StudentsPage() {
   const supabase = createClient();
@@ -32,6 +34,9 @@ export default function StudentsPage() {
   const [rfidScanning, setRfidScanning] = useState(false);
   const [rfidPort, setRfidPort] = useState<any>(null);
   const [rfidReader, setRfidReader] = useState<any>(null);
+  const importInputRef = useRef<HTMLInputElement>(null);
+  const [viewTarget, setViewTarget] = useState<Student | null>(null);
+  const [importing, setImporting] = useState(false);
 
   const emptyForm = {
     student_code: "",
@@ -378,6 +383,106 @@ export default function StudentsPage() {
     load();
   }
 
+  function exportStudentsCsv(all = false) {
+    const rows = (all ? students : filtered).map((student) => {
+      const card = student.rfid_cards?.find((c) => c.status === "active") ?? student.rfid_cards?.[0];
+      return {
+        student_code: student.student_code,
+        index_number: student.index_number,
+        full_name: student.full_name,
+        class: student.class ? `${student.grade?.name ?? ""} - ${student.division?.name ?? ""}` : "",
+        class_id: student.class_id ?? "",
+        rfid_uid: card?.rfid_uid ?? "",
+        status: student.status,
+      };
+    });
+    downloadCsv(`KNCC_students_${new Date().toISOString().slice(0, 10)}.csv`, rows);
+    toast.success(`${rows.length} student records exported.`);
+  }
+
+  function downloadStudentTemplate() {
+    downloadText(
+      "KNCC_students_import_template.csv",
+      "student_code,index_number,full_name,class,class_id,rfid_uid,status\r\nSTU001,001,Example Student,Grade 10 - A,,A1B2C3D4,active\r\n",
+      "text/csv;charset=utf-8",
+    );
+  }
+
+  async function importStudentsCsv(file: File) {
+    setImporting(true);
+    try {
+      const rows = parseCsv(await file.text());
+      if (!rows.length) throw new Error("CSV file is empty.");
+      const classByLabel = new Map(classes.map((c) => [`${c.grade?.name ?? ""} - ${c.division?.name ?? ""}`.toLowerCase(), c]));
+      const classById = new Map(classes.map((c) => [c.id, c]));
+      const byCode = new Map(students.map((x) => [x.student_code.toLowerCase(), x]));
+      const byIndex = new Map(students.map((x) => [x.index_number.toLowerCase(), x]));
+      let inserted = 0;
+      let updated = 0;
+      let cards = 0;
+      const errors: string[] = [];
+
+      for (let i = 0; i < rows.length; i += 1) {
+        const row = rows[i];
+        const studentCode = firstValue(row, "student_code", "student id", "student_id", "student code");
+        const indexNumber = firstValue(row, "index_number", "index no", "index number");
+        const fullName = firstValue(row, "full_name", "name", "student name");
+        if (!studentCode || !indexNumber || !fullName) {
+          errors.push(`Row ${i + 2}: student_code, index_number and full_name are required.`);
+          continue;
+        }
+        const classIdRaw = firstValue(row, "class_id");
+        const classLabel = firstValue(row, "class", "class_name").toLowerCase();
+        const classItem = classIdRaw ? classById.get(classIdRaw) : classByLabel.get(classLabel);
+        if ((classIdRaw || classLabel) && !classItem) {
+          errors.push(`Row ${i + 2}: class could not be matched. Use the exact class label or class_id from Export CSV.`);
+          continue;
+        }
+        const status = firstValue(row, "status") || "active";
+        const existing = byCode.get(studentCode.toLowerCase()) ?? byIndex.get(indexNumber.toLowerCase());
+        const payload = { student_code: studentCode, index_number: indexNumber, full_name: fullName, class_id: classItem?.id ?? null, status };
+
+        let studentId = existing?.id;
+        if (existing) {
+          const { error } = await supabase.from("students").update(payload).eq("id", existing.id);
+          if (error) { errors.push(`Row ${i + 2}: ${error.message}`); continue; }
+          updated += 1;
+          studentId = existing.id;
+        } else {
+          const { data, error } = await supabase.from("students").insert(payload).select("id").single();
+          if (error || !data) { errors.push(`Row ${i + 2}: ${error?.message ?? "student insert failed"}`); continue; }
+          inserted += 1;
+          studentId = data.id;
+        }
+
+        const uid = normalizeUid(firstValue(row, "rfid_uid", "rfid", "uid", "rfid card"));
+        if (uid && studentId) {
+          const { data: existingCard, error: cardLookupError } = await supabase.from("rfid_cards").select("id, student_id").eq("rfid_uid", uid).maybeSingle();
+          if (cardLookupError) { errors.push(`Row ${i + 2}: ${cardLookupError.message}`); continue; }
+          if (existingCard && existingCard.student_id !== studentId) { errors.push(`Row ${i + 2}: RFID UID ${uid} already belongs to another student.`); continue; }
+          if (existingCard) {
+            await supabase.from("rfid_cards").update({ student_id: studentId, status: "active" }).eq("id", existingCard.id);
+          } else {
+            const { error } = await supabase.from("rfid_cards").insert({ rfid_uid: uid, student_id: studentId, status: "active", registered_at: new Date().toISOString() });
+            if (error) { errors.push(`Row ${i + 2}: ${error.message}`); continue; }
+          }
+          cards += 1;
+        }
+      }
+      if (errors.length) toast.error(`${errors.length} row(s) need attention. First: ${errors[0]}`);
+      toast.success(`Import finished: ${inserted} added, ${updated} updated, ${cards} RFID links.`);
+      await load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not import CSV.");
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  function openView(student: Student) {
+    setViewTarget(student);
+  }
+
   async function handleDelete() {
     if (!deleteTarget) return;
     setDeleting(true);
@@ -397,15 +502,29 @@ export default function StudentsPage() {
     <div>
       <PageHeader
         title="Students"
-        description="Add students quickly with class details and an RFID card UID."
+        description="Fast search, quick student details, RFID linking, CSV import/export, and simple counts."
         action={
           isSuperAdmin ? (
             <div className="flex gap-2">
-              <button className="btn-outline" title="Import/export structure — connect to your data pipeline" disabled>
-                <Upload className="h-4 w-4" /> Import
+              <input
+                ref={importInputRef}
+                type="file"
+                accept=".csv,text/csv"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  e.currentTarget.value = "";
+                  if (file) void importStudentsCsv(file);
+                }}
+              />
+              <button className="btn-outline" onClick={() => importInputRef.current?.click()} disabled={importing}>
+                <Upload className="h-4 w-4" /> {importing ? "Importing…" : "Import CSV"}
               </button>
-              <button className="btn-outline" title="Export current list" disabled>
-                <Download className="h-4 w-4" /> Export
+              <button className="btn-outline" onClick={() => exportStudentsCsv(false)}>
+                <Download className="h-4 w-4" /> Export CSV
+              </button>
+              <button className="btn-outline" title="Download a blank import template" onClick={downloadStudentTemplate}>
+                <FileSpreadsheet className="h-4 w-4" /> Template
               </button>
               <button className="btn-primary" onClick={openCreate}>
                 <Plus className="h-4 w-4" /> Add Student
@@ -414,6 +533,13 @@ export default function StudentsPage() {
           ) : undefined
         }
       />
+
+      <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCard label="Total Students" value={students.length} icon={Users} tone="info" />
+        <StatCard label="Active" value={students.filter((s) => s.status === "active").length} icon={Users} tone="success" />
+        <StatCard label="With RFID" value={students.filter((s) => s.rfid_cards?.some((c) => c.status === "active")).length} icon={CreditCard} tone="default" />
+        <StatCard label="No RFID" value={students.filter((s) => !s.rfid_cards?.some((c) => c.status === "active")).length} icon={CreditCard} tone="warning" />
+      </div>
 
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
@@ -451,24 +577,31 @@ export default function StudentsPage() {
       ) : filtered.length === 0 ? (
         <EmptyState icon={Search} title="No matching students" description="Try adjusting your search or filters." />
       ) : (
-        <div className="card overflow-x-auto">
+        <div>
+          <div className="mb-2 flex items-center justify-between text-xs text-slate-400">
+            <span>Showing {filtered.length} of {students.length} students</span>
+            <span>{search.trim() ? "Search active" : "Ready"}</span>
+          </div>
+          <div className="card overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="border-b border-slate-200 bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500 dark:border-slate-800 dark:bg-slate-800/50">
               <tr>
+                <th className="w-12 px-4 py-3 text-center">#</th>
                 <th className="px-4 py-3">Name</th>
                 <th className="px-4 py-3">Index No.</th>
                 <th className="px-4 py-3">Class</th>
                 <th className="px-4 py-3">RFID Card</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Registered</th>
-                {isSuperAdmin && <th className="px-4 py-3 text-right">Actions</th>}
+                <th className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {filtered.map((s) => {
+              {filtered.map((s, rowIndex) => {
                 const card = s.rfid_cards?.[0];
                 return (
                   <tr key={s.id}>
+                    <td className="px-4 py-3 text-center text-xs text-slate-400">{rowIndex + 1}</td>
                     <td className="px-4 py-3">
                       <p className="font-medium text-slate-900 dark:text-slate-100">{s.full_name}</p>
                       <p className="text-xs text-slate-400">{s.student_code}</p>
@@ -491,17 +624,17 @@ export default function StudentsPage() {
                     </td>
                     <td className="px-4 py-3"><Badge tone={statusTone(s.status)}>{s.status}</Badge></td>
                     <td className="px-4 py-3 text-slate-500">{formatDate(s.registration_date)}</td>
-                    {isSuperAdmin && (
-                      <td className="px-4 py-3 text-right">
-                        <button onClick={() => openEdit(s)} className="mr-2 rounded p-1.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"><Pencil className="h-4 w-4" /></button>
-                        <button onClick={() => setDeleteTarget(s)} className="rounded p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-950"><Trash2 className="h-4 w-4" /></button>
-                      </td>
-                    )}
+                    <td className="px-4 py-3 text-right">
+                      <button title="View student details" onClick={() => openView(s)} className="mr-1 rounded p-1.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"><Eye className="h-4 w-4" /></button>
+                      {isSuperAdmin && <><button title="Edit student" onClick={() => openEdit(s)} className="mr-1 rounded p-1.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"><Pencil className="h-4 w-4" /></button>
+                      <button title="Delete student" onClick={() => setDeleteTarget(s)} className="rounded p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-950"><Trash2 className="h-4 w-4" /></button></>}
+                    </td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 
@@ -600,6 +733,27 @@ export default function StudentsPage() {
             </button>
           </div>
         </form>
+      </Modal>
+
+      <Modal open={!!viewTarget} onClose={() => setViewTarget(null)} title="Student Details">
+        {viewTarget && (() => {
+          const activeCard = viewTarget.rfid_cards?.find((c) => c.status === "active") ?? viewTarget.rfid_cards?.[0];
+          return (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div><p className="text-xs text-slate-400">Student ID</p><p className="font-medium">{viewTarget.student_code}</p></div>
+              <div><p className="text-xs text-slate-400">Index Number</p><p className="font-medium">{viewTarget.index_number}</p></div>
+              <div className="sm:col-span-2"><p className="text-xs text-slate-400">Full Name</p><p className="font-medium">{viewTarget.full_name}</p></div>
+              <div><p className="text-xs text-slate-400">Class</p><p>{viewTarget.grade?.name ?? "—"} {viewTarget.division?.name ?? ""}</p></div>
+              <div><p className="text-xs text-slate-400">Status</p><Badge tone={statusTone(viewTarget.status)}>{viewTarget.status}</Badge></div>
+              <div className="sm:col-span-2">
+                <p className="text-xs text-slate-400">Active RFID</p>
+                {activeCard ? <p className="font-mono text-sm">{activeCard.rfid_uid}</p> : <p className="text-slate-400">No active RFID linked</p>}
+              </div>
+              <div><p className="text-xs text-slate-400">Signal Profile</p><p>{activeCard?.signal_fingerprint ? "Enrolled & verified" : "Waiting for first signal scan"}</p></div>
+              <div><p className="text-xs text-slate-400">Signal Verifications</p><p>{activeCard?.signal_verify_count ?? 0}</p></div>
+            </div>
+          );
+        })()}
       </Modal>
 
       <ConfirmDialog

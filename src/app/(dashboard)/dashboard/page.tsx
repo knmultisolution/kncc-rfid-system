@@ -30,6 +30,8 @@ export default async function DashboardPage() {
     { count: deviceCount },
     { data: devices },
     { count: pendingSync },
+    { count: todayScanCount },
+    { count: invalidScanCount },
     { data: latestScan },
   ] = await Promise.all([
     supabase.from("students").select("*", { count: "exact", head: true }).eq("status", "active"),
@@ -37,6 +39,8 @@ export default async function DashboardPage() {
     supabase.from("attendance_devices").select("*", { count: "exact", head: true }),
     supabase.from("attendance_devices").select("*"),
     supabase.from("attendance_sync_queue").select("*", { count: "exact", head: true }).eq("sync_status", "pending"),
+    supabase.from("attendance_scan_events").select("*", { count: "exact", head: true }).gte("scanned_at", `${today}T00:00:00+05:30`).lt("scanned_at", `${today}T23:59:59+05:30`),
+    supabase.from("attendance_scan_events").select("*", { count: "exact", head: true }).gte("scanned_at", `${today}T00:00:00+05:30`).lt("scanned_at", `${today}T23:59:59+05:30`).in("verification_status", ["card_invalid", "signal_mismatch"]),
     supabase
       .from("attendance_records")
       .select("*, student:students(full_name, index_number), device:attendance_devices(device_name)")
@@ -85,6 +89,8 @@ export default async function DashboardPage() {
         <StatCard label="Entries" value={entries} icon={LogIn} tone="default" />
         <StatCard label="Exits" value={exits} icon={LogOut} tone="default" />
         <StatCard label="Attendance %" value={`${attendancePct}%`} icon={Percent} tone="info" />
+        <StatCard label="Raw Scans Today" value={todayScanCount ?? 0} icon={ScanLine} tone="default" />
+        <StatCard label="Invalid / Mismatch" value={invalidScanCount ?? 0} icon={UserX} tone={invalidScanCount ? "danger" : "default"} />
         <StatCard label="Pending Offline Records" value={pendingSync ?? 0} icon={CloudOff} tone={pendingSync ? "warning" : "default"} />
       </div>
 

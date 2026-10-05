@@ -79,6 +79,11 @@ export interface RfidCard {
   disabled_at: string | null;
   replaced_card_id: string | null;
   last_scanned_at: string | null;
+  signal_profile?: Record<string, unknown> | null;
+  signal_fingerprint?: string | null;
+  first_signal_captured_at?: string | null;
+  last_signal_verified_at?: string | null;
+  signal_verify_count?: number;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -108,12 +113,35 @@ export interface AttendanceRecord {
   scan_time: string;
   attendance_type: AttendanceType;
   status: AttendanceStatus;
+  rfid_uid?: string | null;
+  signal_profile?: Record<string, unknown> | null;
+  signal_fingerprint?: string | null;
+  scan_event_id?: string | null;
   sync_status: SyncStatus;
   is_manual_edit: boolean;
   edited_by: string | null;
   edit_reason: string | null;
   created_at: string;
   student?: Student;
+  device?: AttendanceDevice | null;
+}
+
+export interface AttendanceScanEvent {
+  id: string;
+  device_id: string | null;
+  rfid_card_id: string | null;
+  student_id: string | null;
+  rfid_uid: string;
+  scanned_at: string;
+  signal_profile: Record<string, unknown> | null;
+  signal_fingerprint: string | null;
+  verification_status: string;
+  verification_message: string | null;
+  attendance_record_id: string | null;
+  attendance_type: AttendanceType | null;
+  attendance_status: AttendanceStatus | null;
+  created_at: string;
+  student?: Student | null;
   device?: AttendanceDevice | null;
 }
 
