@@ -160,7 +160,7 @@ export default function RfidCardsPage() {
 
     <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
       <StatCard label="Total Cards" value={cards.length} icon={CreditCard} tone="info" />
-      <StatCard label="Active" value={cards.filter((c) => c.status === "active").length} icon={ShieldCheck} tone="green" />
+      <StatCard label="Active" value={cards.filter((c) => c.status === "active").length} icon={ShieldCheck} tone="success" />
       <StatCard label="Signal Enrolled" value={cards.filter((c) => !!c.signal_fingerprint).length} icon={ShieldCheck} tone="default" />
       <StatCard label="Needs First Scan" value={cards.filter((c) => c.status === "active" && !c.signal_fingerprint).length} icon={ShieldAlert} tone="warning" />
     </div>
@@ -179,7 +179,7 @@ export default function RfidCardsPage() {
           <td className="px-4 py-3 font-mono text-xs font-medium">{c.rfid_uid}</td>
           <td className="px-4 py-3">{c.student ? <><p className="font-medium">{c.student.full_name}</p><p className="text-xs text-slate-400">{c.student.student_code} · {c.student.index_number}</p></> : <span className="text-slate-400">Unassigned</span>}</td>
           <td className="px-4 py-3"><Badge tone={statusTone(c.status)}>{c.status}</Badge></td>
-          <td className="px-4 py-3">{c.signal_fingerprint ? <div className="flex items-center gap-2"><Badge tone="green">Verified profile</Badge><span className="text-xs text-slate-400">{c.signal_verify_count ?? 0}x</span></div> : <Badge tone="amber">Not enrolled</Badge>}</td>
+          <td className="px-4 py-3">{c.signal_fingerprint ? <div className="flex items-center gap-2"><Badge tone="success">Verified profile</Badge><span className="text-xs text-slate-400">{c.signal_verify_count ?? 0}x</span></div> : <Badge tone="amber">Not enrolled</Badge>}</td>
           <td className="px-4 py-3 text-slate-500">{formatDateTime(c.last_scanned_at)}</td>
           <td className="px-4 py-3"><div className="flex justify-end gap-1"><button title="View card details" onClick={() => setHistoryTarget(c)} className="rounded p-1.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"><Eye className="h-4 w-4" /></button><button title="Reassign" onClick={() => openReassign(c)} className="rounded p-1.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"><UserPlus2 className="h-4 w-4" /></button><button title="Replace" onClick={() => openReplace(c)} className="rounded p-1.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"><RefreshCcw className="h-4 w-4" /></button>{c.status !== "disabled" && <button title="Disable" onClick={() => setDisableTarget(c)} className="rounded p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-950"><Ban className="h-4 w-4" /></button>}</div></td>
         </tr>)}</tbody>
