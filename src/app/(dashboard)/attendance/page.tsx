@@ -48,7 +48,7 @@ export default function AttendancePage() {
 
   const present = records.filter((r) => r.status === "present").length;
   const late = records.filter((r) => r.status === "late").length;
-  const verifiedScans = scanEvents.filter((r) => r.verification_status === "received").length;
+  const verifiedScans = scanEvents.filter((r) => ["verified","signal_enrolled"].includes(r.verification_status)).length;
   const invalidScans = scanEvents.filter((r) => ["card_invalid","signal_mismatch"].includes(r.verification_status)).length;
 
   function openEdit(r: AttendanceRecord) { setEditTarget(r); setEditStatus(r.status); setEditReason(""); }
@@ -66,7 +66,7 @@ export default function AttendancePage() {
     <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
       <StatCard label="Attendance Records" value={records.length} icon={ClipboardList} tone="info" />
       <StatCard label="Raw Scans" value={scanEvents.length} icon={ScanLine} tone="default" />
-      <StatCard label="Processed Scans" value={verifiedScans} icon={ShieldCheck} tone="success" />
+      <StatCard label="Verified Scans" value={verifiedScans} icon={ShieldCheck} tone="success" />
       <StatCard label="Invalid / Mismatch" value={invalidScans} icon={ShieldAlert} tone="danger" />
     </div>
 
@@ -74,8 +74,8 @@ export default function AttendancePage() {
       <button onClick={() => setTab("attendance")} className={tab === "attendance" ? "btn-primary" : "btn-outline"}>Attendance</button>
       <button onClick={() => setTab("scans")} className={tab === "scans" ? "btn-primary" : "btn-outline"}>Scan Activity</button>
       <input type="date" className="input sm:w-48" value={date} onChange={(e) => setDate(e.target.value)} />
-      <div className="relative min-w-[240px] flex-1"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input className="input pl-9" placeholder={tab === "attendance" ? "Search student name or index…" : "Search UID, student, result, or signal data…"} value={search} onChange={(e) => setSearch(e.target.value)} /></div>
-      {tab === "attendance" ? <select className="input sm:w-40" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}><option value="">All statuses</option><option value="present">Present</option><option value="late">Late</option><option value="absent">Absent</option></select> : <select className="input sm:w-52" value={verificationFilter} onChange={(e) => setVerificationFilter(e.target.value)}><option value="">All scan results</option><option value="received">Data received</option><option value="duplicate_blocked">Duplicate blocked</option><option value="card_invalid">Card not registered</option></select>}
+      <div className="relative min-w-[240px] flex-1"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input className="input pl-9" placeholder={tab === "attendance" ? "Search student name or index…" : "Search UID, student, result, or fingerprint…"} value={search} onChange={(e) => setSearch(e.target.value)} /></div>
+      {tab === "attendance" ? <select className="input sm:w-40" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}><option value="">All statuses</option><option value="present">Present</option><option value="late">Late</option><option value="absent">Absent</option></select> : <select className="input sm:w-52" value={verificationFilter} onChange={(e) => setVerificationFilter(e.target.value)}><option value="">All scan results</option><option value="signal_enrolled">Signal enrolled</option><option value="verified">Verified</option><option value="duplicate_blocked">Duplicate blocked</option><option value="card_invalid">Card invalid</option><option value="signal_mismatch">Signal mismatch</option></select>}
     </div>
 
     {loading ? <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-brand-600" /></div> : tab === "attendance" ? (
