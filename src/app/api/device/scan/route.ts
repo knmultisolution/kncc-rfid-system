@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
   const queueUpdate = {
     sync_status: result.result === "card_invalid" || result.result === "signal_mismatch" ? "failed" : "synced",
     verification_status: result.result === "ok"
-      ? (result.signal_action === "enrolled" ? "signal_enrolled" : "verified")
+      ? "received"
       : result.result,
     verified_student_id: result.student_id ?? null,
     verified_attendance_id: result.attendance_id ?? null,
