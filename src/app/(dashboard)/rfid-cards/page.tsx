@@ -35,13 +35,50 @@ export default function RfidCardsPage() {
 
   async function load() {
     setLoading(true);
-    const [{ data: c, error }, { data: s }] = await Promise.all([
-      supabase.from("rfid_cards").select("*, student:students(*, grade:grades(*), division:divisions(*))").order("created_at", { ascending: false }),
-      supabase.from("students").select("*").eq("status", "active").order("full_name"),
+
+    // Load RFID rows directly, and also load the student -> rfid_cards
+    // relationship. The second query is an intentional fallback because a
+    // linked card can be visible from the Students page even when the direct
+    // RFID Cards query is affected by a PostgREST relationship/RLS issue.
+    const [{ data: directCards, error: directError }, { data: studentRows, error: studentsError }] = await Promise.all([
+      supabase.from("rfid_cards").select("*").order("created_at", { ascending: false }),
+      supabase
+        .from("students")
+        .select("*, grade:grades(*), division:divisions(*), class:classes(*, grade:grades(*), division:divisions(*)), rfid_cards(*)")
+        .eq("status", "active")
+        .order("full_name"),
     ]);
-    if (error) toast.error(error.message);
-    setCards((c as RfidCard[]) ?? []);
-    setStudents((s as Student[]) ?? []);
+
+    const loadedStudents = (studentRows as Student[]) ?? [];
+    const studentById = new Map(loadedStudents.map((student) => [student.id, student]));
+    const merged = new Map<string, RfidCard>();
+
+    for (const raw of ((directCards as RfidCard[]) ?? [])) {
+      const student = raw.student_id ? studentById.get(raw.student_id) ?? null : null;
+      merged.set(raw.id, { ...raw, student });
+    }
+
+    // Add any cards returned through the Students -> RFID relationship that
+    // were missing from the direct query. This is what makes a saved card such
+    // as 8A425716 reliably appear in RFID Cards after it is linked to a student.
+    for (const student of loadedStudents) {
+      for (const linked of student.rfid_cards ?? []) {
+        const existing = merged.get(linked.id);
+        merged.set(linked.id, {
+          ...linked,
+          student: existing?.student ?? student,
+        });
+      }
+    }
+
+    if (directError && studentsError) toast.error(directError.message || studentsError.message);
+
+    const loadedCards = Array.from(merged.values()).sort((a, b) =>
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+
+    setCards(loadedCards);
+    setStudents(loadedStudents);
     setLoading(false);
   }
 
